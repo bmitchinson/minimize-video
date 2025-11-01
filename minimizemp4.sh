@@ -1,0 +1,109 @@
+#!/usr/bin/env zsh
+
+# MP4 Minimize Script
+# Compresses MP4 files to target sizes: 8MB, 20MB, or 50MB
+# Usage: ./minimizemp4.sh <size> <input_file> [speed]
+# Speed options: fast, medium (default), slow
+# Example: ./minimizemp4.sh 20 input.mp4 fast
+
+set -e  # Exit on any error
+
+# Check if correct number of arguments provided
+if [[ $# -ne 2 ]]; then
+    echo "Usage: $0 <size> <input_file>"
+    echo "Sizes: 8, 20, or 50 (MB)"
+    echo "Example: $0 20 myvideo.mp4"
+    exit 1
+fi
+
+TARGET_SIZE=$1
+INPUT_FILE=$2
+
+# Validate target size
+if [[ ! "$TARGET_SIZE" =~ ^(8|20|50)$ ]]; then
+    echo "Error: Size must be 8, 20, or 50 (MB)"
+    exit 1
+fi
+
+# Check if input file exists
+if [[ ! -f "$INPUT_FILE" ]]; then
+    echo "Error: Input file '$INPUT_FILE' does not exist"
+    exit 1
+fi
+
+# Check if input file is an MP4
+if [[ ! "$INPUT_FILE" == *.mp4 && ! "$INPUT_FILE" == *.MP4 ]]; then
+    echo "Error: Input file must be an MP4 file"
+    exit 1
+fi
+
+# Check if ffmpeg is installed
+if ! command -v ffmpeg &> /dev/null; then
+    echo "Error: ffmpeg is not installed or not in PATH"
+    exit 1
+fi
+
+# Generate output filename in same directory as input
+INPUT_DIR=$(dirname "$INPUT_FILE")
+BASENAME=$(basename "$INPUT_FILE" .mp4)
+BASENAME=$(basename "$BASENAME" .MP4)  # Handle uppercase extension
+OUTPUT_FILE="${INPUT_DIR}/${BASENAME}_${TARGET_SIZE}MB.mp4"
+
+echo "Compressing '$INPUT_FILE' to approximately ${TARGET_SIZE}MB..."
+echo "Output file: '$OUTPUT_FILE'"
+
+# Get video duration in seconds
+DURATION=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$INPUT_FILE")
+if [[ -z "$DURATION" ]]; then
+    echo "Error: Could not determine video duration"
+    exit 1
+fi
+
+# Calculate target bitrate
+# Target size in bits = TARGET_SIZE * 8 * 1000000 (convert MB to bits)
+# Audio bitrate assumption: 128k
+# Video bitrate = (target_bits / duration) - audio_bitrate
+# Add 10% buffer to account for overhead
+TARGET_BITS=$((TARGET_SIZE * 8 * 1000000))
+AUDIO_BITRATE=128000  # 128k audio bitrate
+VIDEO_BITRATE=$(echo "scale=0; ($TARGET_BITS / $DURATION - $AUDIO_BITRATE) * 0.9" | bc)
+
+# Ensure minimum bitrate
+if (( $(echo "$VIDEO_BITRATE < 100000" | bc -l) )); then
+    VIDEO_BITRATE=100000
+    echo "Warning: Video is very long for target size. Using minimum bitrate."
+fi
+
+echo "Calculated video bitrate: ${VIDEO_BITRATE} bits/s"
+
+# Run FFmpeg compression
+ffmpeg -i "$INPUT_FILE" \
+    -c:v libx264 \
+    -preset fast \
+    -crf 23 \
+    -maxrate "${VIDEO_BITRATE}" \
+    -bufsize "$((VIDEO_BITRATE * 2))" \
+    -c:a aac \
+    -b:a 128k \
+    -movflags +faststart \
+    -y \
+    "$OUTPUT_FILE"
+
+# Check if output file was created successfully
+if [[ ! -f "$OUTPUT_FILE" ]]; then
+    echo "Error: Output file was not created"
+    exit 1
+fi
+
+# Show file sizes
+INPUT_SIZE=$(du -h "$INPUT_FILE" | cut -f1)
+OUTPUT_SIZE=$(du -h "$OUTPUT_FILE" | cut -f1)
+
+echo ""
+echo "Compression complete!"
+echo "Input file:  $INPUT_FILE ($INPUT_SIZE)"
+echo "Output file: $OUTPUT_FILE ($OUTPUT_SIZE)"
+
+# Calculate actual file size in MB for verification
+ACTUAL_MB=$(echo "scale=1; $(stat -f%z "$OUTPUT_FILE") / 1000000" | bc)
+echo "Target: ${TARGET_SIZE}MB | Actual: ${ACTUAL_MB}MB"
