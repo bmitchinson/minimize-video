@@ -1,10 +1,11 @@
 #!/usr/bin/env zsh
 
-# MP4 Minimize Script
-# Compresses MP4 files to target sizes: 8MB, 20MB, or 50MB
-# Usage: ./minimizemp4.sh <size> <input_file> [speed]
+# MP4/MOV Minimize Script
+# Compresses MP4 and MOV files to target sizes: 8MB, 20MB, or 50MB
+# Usage: ./minimize-video.sh <size> <input_file> [speed]
 # Speed options: fast, medium (default), slow
-# Example: ./minimizemp4.sh 20 input.mp4 fast
+# Example: ./minimize-video.sh 20 input.mp4 fast
+# Example: ./minimize-video.sh 20 input.mov fast
 
 set -e  # Exit on any error
 
@@ -13,6 +14,7 @@ if [[ $# -ne 2 ]]; then
     echo "Usage: $0 <size> <input_file>"
     echo "Sizes: 8, 20, or 50 (MB)"
     echo "Example: $0 20 myvideo.mp4"
+    echo "Example: $0 20 myvideo.mov"
     exit 1
 fi
 
@@ -31,9 +33,9 @@ if [[ ! -f "$INPUT_FILE" ]]; then
     exit 1
 fi
 
-# Check if input file is an MP4
-if [[ ! "$INPUT_FILE" == *.mp4 && ! "$INPUT_FILE" == *.MP4 ]]; then
-    echo "Error: Input file must be an MP4 file"
+# Check if input file is an MP4 or MOV
+if [[ ! "$INPUT_FILE" == *.mp4 && ! "$INPUT_FILE" == *.MP4 && ! "$INPUT_FILE" == *.mov && ! "$INPUT_FILE" == *.MOV ]]; then
+    echo "Error: Input file must be an MP4 or MOV file"
     exit 1
 fi
 
@@ -46,7 +48,9 @@ fi
 # Generate output filename in same directory as input
 INPUT_DIR=$(dirname "$INPUT_FILE")
 BASENAME=$(basename "$INPUT_FILE" .mp4)
-BASENAME=$(basename "$BASENAME" .MP4)  # Handle uppercase extension
+BASENAME=$(basename "$BASENAME" .MP4)   # Handle uppercase MP4 extension
+BASENAME=$(basename "$BASENAME" .mov)   # Handle MOV extension
+BASENAME=$(basename "$BASENAME" .MOV)   # Handle uppercase MOV extension
 OUTPUT_FILE="${INPUT_DIR}/${BASENAME}_${TARGET_SIZE}MB.mp4"
 
 echo "Compressing '$INPUT_FILE' to approximately ${TARGET_SIZE}MB..."
