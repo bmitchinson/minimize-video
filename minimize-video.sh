@@ -1,29 +1,29 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
 # MP4/MOV Minimize Script
-# Compresses MP4 and MOV files to target sizes: 8MB, 20MB, or 50MB
-# Usage: ./minimize-video.sh <size> <input_file> [speed]
-# Speed options: fast, medium (default), slow
-# Example: ./minimize-video.sh 20 input.mp4 fast
-# Example: ./minimize-video.sh 20 input.mov fast
+# Compresses MP4 and MOV files to target size in MB
+# Usage: ./minimize-video.sh <size> <input_file>
+# Example: ./minimize-video.sh 20 input.mp4
+# Example: ./minimize-video.sh 50 input.mov
+# Example: ./minimize-video.sh 5.5 input.mp4
 
 set -e  # Exit on any error
 
 # Check if correct number of arguments provided
 if [[ $# -ne 2 ]]; then
     echo "Usage: $0 <size> <input_file>"
-    echo "Sizes: 8, 20, or 50 (MB)"
+    echo "Size: Target size in MB (e.g., 8, 20, 50, 5.5)"
     echo "Example: $0 20 myvideo.mp4"
-    echo "Example: $0 20 myvideo.mov"
+    echo "Example: $0 5.5 myvideo.mov"
     exit 1
 fi
 
 TARGET_SIZE=$1
 INPUT_FILE=$2
 
-# Validate target size
-if [[ ! "$TARGET_SIZE" =~ ^(8|20|50)$ ]]; then
-    echo "Error: Size must be 8, 20, or 50 (MB)"
+# Validate target size is a positive number
+if ! [[ "$TARGET_SIZE" =~ ^[0-9]+([.][0-9]+)?$ ]] || (( $(echo "$TARGET_SIZE <= 0" | bc -l) )); then
+    echo "Error: Size must be a positive number (MB)"
     exit 1
 fi
 
