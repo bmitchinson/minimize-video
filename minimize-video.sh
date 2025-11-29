@@ -68,7 +68,7 @@ fi
 # Audio bitrate assumption: 128k
 # Video bitrate = (target_bits / duration) - audio_bitrate
 # Add 10% buffer to account for overhead
-TARGET_BITS=$((TARGET_SIZE * 8 * 1000000))
+TARGET_BITS=$(echo "scale=0; $TARGET_SIZE * 8 * 1000000" | bc)
 AUDIO_BITRATE=128000  # 128k audio bitrate
 VIDEO_BITRATE=$(echo "scale=0; ($TARGET_BITS / $DURATION - $AUDIO_BITRATE) * 0.9" | bc)
 
@@ -86,7 +86,7 @@ ffmpeg -i "$INPUT_FILE" \
     -preset fast \
     -crf 23 \
     -maxrate "${VIDEO_BITRATE}" \
-    -bufsize "$((VIDEO_BITRATE * 2))" \
+    -bufsize "$(echo "scale=0; $VIDEO_BITRATE * 2" | bc)" \
     -c:a aac \
     -b:a 128k \
     -movflags +faststart \
